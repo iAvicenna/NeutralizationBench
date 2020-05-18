@@ -167,7 +167,7 @@ def test_ConservationLaws(fail_switch=False):
     is_failed = True  # every test fails until proven otherwise
     fail_test = 0
     if fail_switch:
-        fail_test = np.random.randint(2) + 1  # fail one of the 2 tests on purpose
+        fail_test = np.random.randint(3) + 1  # fail one of the 3 tests on purpose
     
     # test1: 2 antigen, 2 antibody,d(V-Ab)/dt = d(V+AbV)/dt = dAb+AbV/dt=0
     number_of_antigens = 1
@@ -243,7 +243,7 @@ def test_ConservationLaws(fail_switch=False):
             print('Test2 of ConservationLaws failed.')
         return is_failed
     
-    # test3: solutions of the equations should also satisfy the same: 
+    # test3: solutions of the equations should also satisfy the same conservation laws:
     init_vals = [np.random.randint(100) + 10, np.random.randint(100) + 10, 
                  np.random.randint(100) + 10, np.random.randint(100) + 10]
     dilutions = [1 / 2560]
