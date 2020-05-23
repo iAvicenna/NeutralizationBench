@@ -10,12 +10,12 @@ assuming each antibody targets only a single site on each antigen.
 
 """
 
-def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
-                       backward_ratios, interference_matrix,
+def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rates,
+                       dissociation_rates, interference_matrix,
                        assay_sensitivity=None, print_equations=False):
 
     """
-    Given number_of_antigens,number_of_antibodies,forward_rates,backward_ratios
+    Given number_of_antigens,number_of_antibodies,association and dissociaton rates
     and interference_matrix it returns a functions which represents
     the system of equations for a system of the form
 
@@ -25,12 +25,11 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
     set of integers I and Ab_j is the jth antibody and V_kAb_{I union i} is the
     complex formed by V_k and Ab_{I union i}
 
-    forward rates determine the forward reaction rate of each equation
+    association rates determine the forward reaction rate of each equation
 
     V_i + Ab_j => V_iAbj
 
-    backward rates are determined by multiplying forward rates with backward
-    ratios
+    dissociation rates determine the rate of backwards reaction.
 
     interference_matrix[i,j,k] determines how the binding of antibody j
     interferes with binding of antibody k for antigen i. If it is 1, there is
@@ -52,20 +51,21 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
             """Assay sensitivity must have number of elements equal to 
             number of antibodies""")
             
-    s1, s2 = forward_rates.shape
-    s3, s4 = backward_ratios.shape
+    s1, s2 = association_rates.shape
+    s3, s4 = dissociation_rates.shape
     s5, s6, s7 = interference_matrix.shape
 
     if s1 != number_of_antigens or s2 != number_of_antibodies:
-        raise ValueError("""Forward rates must have shape number_of_antigens
+        raise ValueError("""Association rates must have shape number_of_antigens
                          x number_of_antibodies. It is {} vs ({},{})""".format
-                         (forward_rates.shape, number_of_antigens,
+                         (association_rates.shape, number_of_antigens,
                           number_of_antibodies))
 
-    if s3 != s1 or s4 != s2:
-        raise ValueError("""Backward ratios must have the same shape as forward
-                         rates but they are {} and {}""".format(
-                         forward_rates.shape, backward_ratios.shape))
+    if s3 != number_of_antigens or s4 != number_of_antibodies:
+        raise ValueError("""Dissociation rates must have shape number_of_antigens
+                         x number_of_antibodies. It is {} vs ({},{})""".format(
+                         dissociation_rates.shape, number_of_antigens,
+                         number_of_antibodies))
 
     if (s5 != number_of_antigens or s6 != number_of_antibodies
             or s7 != number_of_antibodies):
@@ -127,19 +127,19 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
 
     # equations are of the form V_i Ab_k + Ab_j <=> V_i Ab_{i,j}
     # in the loop below we construct lefthand sides and righthand sides
-    # for these equations as well as forward and backward constants (ks)
+    # for these equations as well as association and dissociation rates (ks)
                 
     RHS = []  # list of variables on the righthand sides for equations, each entry corresponds to one equation
     LHS = []  # same as above but lefthand side 
-    ks = []   # forward and backward constants for the equations
+    ks = []   # association and dissociation rates for each equation
         
     for var in variables:
         antigen_name = re.findall(r'V\d+', var)[0]
         i = int(antigen_name[1:])
         if len(re.findall(r'V\d+$', var)) > 0:  # if the variable is only an antigen
             for j in range(number_of_antibodies):  # for each antibody add an equation V_i + A_j => V_i * A_j
-                k = forward_rates[i, j]
-                b = backward_ratios[i, j] * k
+                k = association_rates[i, j]
+                b = dissociation_rates[i, j] 
                 sera_name = 'Ab_' + str(j)
                 LHS.append((var, sera_name))
                 RHS.append(var + sera_name)
@@ -150,8 +150,9 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
             for j in range(number_of_antibodies):
                 
                 if j not in bounds:
-                    k = forward_rates[i, j]
-                    b = backward_ratios[i, j] * k
+                    k = association_rates[i, j]
+                    b = dissociation_rates[i, j] 
+                    sera_name = 'Ab_' + str(j)
                     interference = 1
                     for l in bounds:
                         interference = interference * interference_matrix[i, l, j]
@@ -226,13 +227,13 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, forward_rates,
 
 def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
                                number_of_antibodies, measurement_time,
-                               forward_rates, backward_ratios,
+                               association_rates, dissociation_rates,
                                interference_matrix, assay_sensitivity=None,
                                print_equations=False):
 
     """
     For n antigens and m antibodies, given init_vals in order for the n
-    antigens and m antibodies, the forward rates, backward ratios,
+    antigens and m antibodies, the association and dissociation rates,
     interference_matrix and a set of dilutions, this function computes the
     titer curve of each antigen for the mixture involving these antibodies.
 
@@ -244,12 +245,11 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
     set of integers I and Ab_j is the jth antibody and V_kAb_{I union i} is the
     complex formed by V_k and Ab_{I union i}
 
-    forward rates determine the forward reaction rate of each equation
+    association rates determine the forward reaction rate of each equation
 
     V_i + Ab_j => V_iAbj
 
-    backward rates are determined by multiplying forward rates with backward
-    ratios
+    and dissociation rates determine the reverse reaction rate.
 
     interference_matrix[i,j,k] determines how the binding of antibody j
     interferes with binding of antibody k for antigen i. If it is 1, there is
@@ -285,8 +285,8 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
 
     # create the sustem of equations used to describe the system
     ode_fun, all_variables, inactive_proportions = _systemOfEquations(
-        number_of_antigens, number_of_antibodies, forward_rates, 
-        backward_ratios, interference_matrix, print_equations=print_equations,
+        number_of_antigens, number_of_antibodies, association_rates, 
+        dissociation_rates, interference_matrix, print_equations=print_equations,
         assay_sensitivity=assay_sensitivity)
     
     number_of_variables = len(all_variables)
@@ -299,10 +299,14 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
     y = np.zeros((number_of_antigens, len(dilutions)))
 
     nondiluted_sera_vals = init_vals[number_of_antigens:number_of_antibodies + 1].copy()
+    solutions=[]
     for i, dil in enumerate(dilutions):
         init_vals[number_of_antigens:number_of_antibodies + 1] = nondiluted_sera_vals * dil
-        sol = solve_ivp(ode_fun, tspan, init_vals)
-        
+        t_step = min(measurement_time,600)
+        t_eval = np.arange(0, tspan[-1] + t_step,t_step)
+       
+        sol = solve_ivp(ode_fun, tspan, init_vals, t_eval=t_eval)
+        solutions.append(sol.y)
         for j in range(number_of_antigens):
             for k, var in enumerate(all_variables):
                 if len(re.findall(r'V' + str(j), var)) > 0: 
@@ -334,11 +338,11 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
         log_titers.append(titer)
         titers.append(int(2**(-titer)))
 
-    return y, log_titers, titers, sol.y
+    return y, log_titers, titers, solutions
 
 
-def outputTiterCurvePlot(y, titers, number_of_antigens, dilutions,
-                         strain_names=None, fig=None, ax=None):
+def outputTiterCurvePlot(y, titers, number_of_antigens, dilutions, 
+                         markers=None, strain_names=None, fig=None, ax=None):
 
     """
     Print titer curve for each virus
@@ -348,6 +352,9 @@ def outputTiterCurvePlot(y, titers, number_of_antigens, dilutions,
     import numpy as np
 
     plt.style.use('ggplot')
+
+    if markers is None:
+        markers = ['o'] * number_of_antigens
 
     if strain_names is not None:
         try:
@@ -366,14 +373,17 @@ def outputTiterCurvePlot(y, titers, number_of_antigens, dilutions,
     plot_dilutions = [-np.log2(1 / x) for x in dilutions]
     for i in range(number_of_antigens):
 
-        ax.plot(plot_dilutions, y[i, :], marker='o')
+        ax.plot(plot_dilutions, y[i, :], marker=markers[i], linewidth=3)
         ax.set_xticks(plot_dilutions)
         ax.set_xticklabels([1 / x for x in dilutions], rotation=90)
 
-        titer = titers[i]
-
-        ax.scatter(titer, 0, marker='+', color='black')
-        ax.set_ylim([-0.1, 1])
+        
+        
+        if titers is not None:
+            titer = titers[i]
+            ax.scatter(titer, 0, marker='+', color='black')
+        ax.set_ylim([-0.1, 1.1])
+        ax.set_yticks(np.arange(0,1.25,0.25))
 
         if strain_names is not None:
             ax.set_title(strain_names[i])
@@ -386,7 +396,7 @@ def outputScatterPlot(data_x, data_y, xlabel, ylabel, xticks=None,
 
     """
     Scatter plot of two variables which can be used for comparing things like
-    forward_rates vs titers obtained (see k_vs_titer_notexcess as an example)
+    association_rates vs titers obtained (see k_vs_titer_notexcess as an example)
     """
 
     import matplotlib.pyplot as plt
