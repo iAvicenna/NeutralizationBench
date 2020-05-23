@@ -26,15 +26,15 @@ def test_systemOfEquations(fail_switch=False):
         number_of_antigens = 1
         number_of_antibodies = 1
         
-    forward_rates = np.zeros((number_of_antigens, number_of_antibodies))
-    backward_ratios = np.zeros((number_of_antigens, number_of_antibodies))
+    association_rates = np.zeros((number_of_antigens, number_of_antibodies))
+    dissociation_constants = np.zeros((number_of_antigens, number_of_antibodies))
     interference_matrix = np.zeros((
         number_of_antigens, number_of_antibodies, number_of_antibodies))    
     
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
     except Exception as e:
         print('Test1 of systemOfEquations failed with exception\n "{}".'.format(e))
         return is_failed
@@ -47,15 +47,15 @@ def test_systemOfEquations(fail_switch=False):
     number_of_antigens = 0
     number_of_antibodies = 1
         
-    forward_rates = np.zeros((number_of_antigens, number_of_antibodies))
-    backward_ratios = np.zeros((number_of_antigens, number_of_antibodies))
+    association_rates = np.zeros((number_of_antigens, number_of_antibodies))
+    dissociation_constants = np.zeros((number_of_antigens, number_of_antibodies))
     interference_matrix = np.zeros((number_of_antigens, number_of_antibodies,
                                     number_of_antibodies))
     
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
     except Exception as e:
        
         print('Test1 of systemOfEquations failed with exception\n {} .'.format(e))
@@ -70,18 +70,18 @@ def test_systemOfEquations(fail_switch=False):
     number_of_antigens = 1
     number_of_antibodies = 1
     
-    forward_rates = np.zeros((number_of_antigens, number_of_antibodies))
-    backward_ratios = np.zeros((number_of_antigens, number_of_antibodies))
+    association_rates = np.zeros((number_of_antigens, number_of_antibodies))
+    dissociation_constants = np.zeros((number_of_antigens, number_of_antibodies))
     interference_matrix = np.zeros((number_of_antigens, number_of_antibodies,
                                     number_of_antibodies))
     
     if fail_test == 2:
-        forward_rates = np.ones((number_of_antigens, number_of_antibodies))
+        association_rates = np.ones((number_of_antigens, number_of_antibodies))
    
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
         
     except Exception as e:
        
@@ -100,18 +100,18 @@ def test_systemOfEquations(fail_switch=False):
     number_of_antigens = 1
     number_of_antibodies = 1
     
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies))
-    backward_ratios = 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies))
+    dissociation_constants = 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                    number_of_antibodies))
 
     if fail_test == 3:
-        forward_rates = 5 * np.ones((number_of_antigens, number_of_antibodies))
+        association_rates = 5 * np.ones((number_of_antigens, number_of_antibodies))
    
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
         
     except Exception as e:
        
@@ -136,8 +136,8 @@ def test_systemOfEquations(fail_switch=False):
     if fail_test == 4:
         number_of_antibodies = 3
         
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies))
-    backward_ratios = 1e-4 * np.ones((number_of_antigens,
+    association_rates = np.ones((number_of_antigens, number_of_antibodies))
+    dissociation_constants = 1e-4 * np.ones((number_of_antigens,
                                       number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, 
                                   number_of_antibodies,
@@ -145,8 +145,8 @@ def test_systemOfEquations(fail_switch=False):
 
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
         
     except Exception as e:
        
@@ -159,6 +159,9 @@ def test_systemOfEquations(fail_switch=False):
             print('Test4 of systemOfEquations failed.')      
         return is_failed
    
+    if fail_switch:
+        print('Test{} of systemOfEquations did not fail with fail_switch on.'.format(fail_test))
+    
     return False
 
 
@@ -175,15 +178,15 @@ def test_ConservationLaws(fail_switch=False):
     rand1 = np.random.rand()
     rand2 = np.random.rand()
     
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies))
-    backward_ratios = np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies))
+    dissociation_constants = np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                    number_of_antibodies))
 
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
         
     except Exception as e:
        
@@ -206,21 +209,21 @@ def test_ConservationLaws(fail_switch=False):
         
         return is_failed
         
-    # test1: 2 antigen, 2 antibody,d(V-Ab)/dt = d(V+AbV)/dt = dAb+AbV/dt=0
+    # test2: 2 antigen, 2 antibody,d(V-Ab)/dt = d(V+AbV)/dt = dAb+AbV/dt=0
     number_of_antigens = 2
     number_of_antibodies = 2
     rand1 = np.random.rand() + 0.1
     rand2 = np.random.rand() + 0.1
     
-    forward_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies))
-    backward_ratios = rand2 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies))
+    dissociation_constants = rand2 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                    number_of_antibodies))
 
     try:
         ode, variables, _ = _systemOfEquations(
-            number_of_antigens, number_of_antibodies, forward_rates,
-            backward_ratios, interference_matrix)   
+            number_of_antigens, number_of_antibodies, association_rates,
+            dissociation_constants, interference_matrix)   
         
     except Exception as e:
        
@@ -252,7 +255,7 @@ def test_ConservationLaws(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, interference_matrix,
+            measurement_time, association_rates, dissociation_constants, interference_matrix,
             print_equations=False)
         
     except Exception as e:
@@ -260,18 +263,21 @@ def test_ConservationLaws(fail_switch=False):
         print('Test3 of conservationLaws failed with exception\n"{}".'.format(e))
         return is_failed   
     
-    if fail_test == 2:
-        sol[0, 0] *= 10
+    if fail_test == 3:
+        sol[0][0, 0] *= 10
     
-    sum1 = sol[0, 0] + sol[1, 0] - sol[2, 0] - sol[3, 0] - sol[6, 0] - sol[9, 0]
+    sum1 = sol[0][0, 0] + sol[0][1, 0] - sol[0][2, 0] - sol[0][3, 0] - sol[0][6, 0] - sol[0][9, 0]
     
-    sum2 = sol[0, -1] + sol[1, -1] - sol[2, -1] - sol[3, -1] - sol[6, -1] - sol[9, -1]
+    sum2 = sol[0][0, -1] + sol[0][1, -1] - sol[0][2, -1] - sol[0][3, -1] - sol[0][6, -1] - sol[0][9, -1]
     
     if np.abs(sum1 - sum2) > 1e-5:
           
         if not fail_switch:
             print('Test3 of ConservationLaws failed.')
         return is_failed
+    
+    if fail_switch:
+        print('Test{} of Conservationlaws did not fail with fail_switch on.'.format(fail_test))
     
     return False
  
@@ -295,13 +301,13 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     # test1: 1 antigen and 1 antibody with 0 rates, initial values should remain the same
     number_of_antigens = 1
     number_of_antibodies = 1
-    forward_rates = np.zeros((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = np.zeros((number_of_antigens, number_of_antibodies))
+    association_rates = np.zeros((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = np.zeros((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((
         number_of_antigens, number_of_antibodies, number_of_antibodies))
     
     if fail_test == 1:
-        forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+        association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
     
     init_vals = [total_PFU * ratio / total_volume, total_antibody / total_volume]
     dilutions = [1 / 2560]
@@ -310,15 +316,15 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test1 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
         return is_failed
     
-    if (not all(z == init_vals[0] for z in sol[0, :]) or 
-            not all(z == init_vals[1] * dilutions[0] for z in sol[1, :]) 
-            or not all(z == sol[2, 0] for z in sol[2, :])):
+    if (not all(z == init_vals[0] for z in sol[0][0, :]) or 
+            not all(z == init_vals[1] * dilutions[0] for z in sol[0][1, :]) 
+            or not all(z == sol[0][2, 0] for z in sol[0][2, :])):
             
         if not fail_switch:
             print('Test1 of titrateAntigensAgainstSera failed.')  
@@ -329,12 +335,12 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 2
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
     
     if fail_test != 2:
-        forward_rates[0, 1] = 0
+        association_rates[0, 1] = 0
     
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                    number_of_antibodies))
     
@@ -347,17 +353,17 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios,
+            measurement_time, association_rates, dissociation_constants,
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test2 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
         return is_failed
         
-    if (not all(z < init_vals[0] for z in sol[0, 1:]) or 
-            not all(z < init_vals[1] * dilutions[0] for z in sol[1, 1:]) or not 
-            all(np.abs(z - init_vals[2] * dilutions[0]) < 1e-5 for z in sol[2, :]) or not 
-            all(z > 0 for z in sol[3, 1:]) or not 
-            all(z == 0 for z in sol[4:5, 1:].flatten())):
+    if (not all(z < init_vals[0] for z in sol[0][0, 1:]) or 
+            not all(z < init_vals[1] * dilutions[0] for z in sol[0][1, 1:]) or not 
+            all(np.abs(z - init_vals[2] * dilutions[0]) < 1e-5 for z in sol[0][2, :]) or not 
+            all(z > 0 for z in sol[0][3, 1:]) or not 
+            all(z == 0 for z in sol[0][4:5, 1:].flatten())):
             
         if not fail_switch:
             print('Test2 of titrateAntigensAgainstSera failed.')              
@@ -367,8 +373,8 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 1
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
     
@@ -383,14 +389,14 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test3 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
         return is_failed
     
-    if (not all(np.abs(z - sol[0, 0]) < 1e-5 for z in sol[0, :]) or not 
-            all(np.abs(z) < 1e-5 for z in sol[1, :]) or not all(np.abs(z) < 1e-5 for z in sol[2, :])):
+    if (not all(np.abs(z - sol[0][0, 0]) < 1e-5 for z in sol[0][0, :]) or not 
+            all(np.abs(z) < 1e-5 for z in sol[0][1, :]) or not all(np.abs(z) < 1e-5 for z in sol[0][2, :])):
         
         if not fail_switch:
             print('Test3 of titrateAntigensAgainstSera failed.')  
@@ -401,8 +407,8 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 2
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                    number_of_antibodies))
     
@@ -419,17 +425,17 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test4 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
         return is_failed
         
-    if (not all(z < init_vals[0] for z in sol[0, 1:]) or not 
-            all(z < init_vals[1] * dilutions[0] for z in sol[1, 1:]) or not 
-            all(z == init_vals[2] * dilutions[0] for z in sol[2, :]) or not 
-            all(z > 0 for z in sol[3, 1:]) or not 
-            all(z == 0 for z in sol[4:5, 1:].flatten())):
+    if (not all(z < init_vals[0] for z in sol[0][0, 1:]) or not 
+            all(z < init_vals[1] * dilutions[0] for z in sol[0][1, 1:]) or not 
+            all(z == init_vals[2] * dilutions[0] for z in sol[0][2, :]) or not 
+            all(z > 0 for z in sol[0][3, 1:]) or not 
+            all(z == 0 for z in sol[0][4:5, 1:].flatten())):
         
         if not fail_switch:
             print('Test4 of titrateAntigensAgainstSera failed.')              
@@ -440,8 +446,8 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 2
-    forward_rates = 0.5 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M 
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = 0.5 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M 
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
     
@@ -456,7 +462,7 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y1, log_titers, titers1, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test5 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
@@ -465,8 +471,8 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 1
-    forward_rates = 0.5*np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = 0.5*np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
     
@@ -475,7 +481,7 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
     try:
         y2, log_titers, titers2, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test5 of titrateAntigensAgainstSera failed with exception\n "{}".'.format(e))
@@ -486,6 +492,10 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
         if not fail_switch:
             print('Test5 of titrateAntigensAgainstSera failed.')              
         return is_failed
+    
+    
+    if fail_switch:
+        print('Test{} of titrateAntigensAgainstSera did not fail with fail_switch on.'.format(fail_test))
     
     return False
     
@@ -511,8 +521,8 @@ def test_assaySensitivity(fail_switch=False):
     number_of_antibodies = 1
     rand1 = np.random.rand() + 0.1
     rand2 = np.random.rand() + 0.1
-    forward_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = rand2 * 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = rand2 * 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
     init_vals = [total_PFU * ratio / total_volume, 2*total_antibody / total_volume]
@@ -528,7 +538,7 @@ def test_assaySensitivity(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, assay_sensitivity=assay_sensitivity,
             print_equations=False)
     except Exception as e:
@@ -548,8 +558,8 @@ def test_assaySensitivity(fail_switch=False):
     number_of_antibodies = 2
     rand1 = np.random.rand() + 0.1
     rand2 = np.random.rand() + 0.1
-    forward_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = rand2 * 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = rand2 * 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
     init_vals = [total_PFU * ratio / total_volume,
@@ -568,13 +578,13 @@ def test_assaySensitivity(fail_switch=False):
     try:
         y1, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, assay_sensitivity=assay_sensitivity1,
             print_equations=False)
         
         y2, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, assay_sensitivity=assay_sensitivity2,
             print_equations=False)
     except Exception as e:
@@ -586,6 +596,9 @@ def test_assaySensitivity(fail_switch=False):
         if not fail_switch:
             print('Test2 of titrateAntigensAgainstSera failed.')  
         return is_failed
+    
+    if fail_switch:
+        print('Test{} of titrateAntigensAgainstSera did not fail with fail_switch on.'.format(fail_test))
 
     return False
 
@@ -609,8 +622,8 @@ def test_interferenceMatrix(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 2
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     
     init_vals = [total_PFU * ratio / total_volume,
                  2*total_antibody / total_volume, 2*total_antibody / total_volume]
@@ -628,13 +641,13 @@ def test_interferenceMatrix(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test1 of interference_matrix failed with exception\n "{}".'.format(e))
         return is_failed
     
-    if not all(np.abs(z) == 0 for z in sol[5,:].flatten()):
+    if not all(np.abs(z) == 0 for z in sol[0][5,:].flatten()):
         
         if not fail_switch:
             print('Test1 of titrateAntigensAgainstSera failed.')  
@@ -645,8 +658,8 @@ def test_interferenceMatrix(fail_switch=False):
     
     number_of_antigens = 1
     number_of_antibodies = 3
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     
     init_vals = [total_PFU * ratio / total_volume, 2*total_antibody / total_volume, 
                  2*total_antibody / total_volume, 2*total_antibody / total_volume]
@@ -666,20 +679,23 @@ def test_interferenceMatrix(fail_switch=False):
     try:
         y, log_titers, titers, sol = titrateAntigensAgainstSera(
             init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, forward_rates, backward_ratios, 
+            measurement_time, association_rates, dissociation_constants, 
             interference_matrix, print_equations=False)
     except Exception as e:
         print('Test2 of interference_matrix failed with exception\n "{}".'.format(e))
         return is_failed
     
-    if (not all(np.abs(z) == 0 for z in sol[7,:].flatten()) 
-        or not all(np.abs(z) == 0 for z in sol[10,:].flatten())
-        or not all(np.abs(z) != 0 for z in sol[8:9,-1].flatten())
-        or not all(np.abs(z) != 0 for z in sol[5:6,-1].flatten())):
+    if (not all(np.abs(z) == 0 for z in sol[0][7,:].flatten()) 
+        or not all(np.abs(z) == 0 for z in sol[0][10,:].flatten())
+        or not all(np.abs(z) != 0 for z in sol[0][8:9,-1].flatten())
+        or not all(np.abs(z) != 0 for z in sol[0][5:6,-1].flatten())):
         
         if not fail_switch:
             print('Test2 of interference_matrix failed.')  
         return is_failed
+    
+    if fail_switch:
+        print('Test{} of interference_matrix did not fail with fail_switch on.'.format(fail_test))
     
     return False
     
