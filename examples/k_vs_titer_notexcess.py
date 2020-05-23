@@ -26,8 +26,8 @@ total_volume = 1e-4
 
 
 total_PFU = 100
-total_antibody = 4 * 5e9
-ks = np.linspace(1, 6000, 40)
+total_antibody = 5e11
+ks = np.linspace(np.log2(0.01), np.log2(40), 200)
 len1 = ks.size
 
 ax = None
@@ -35,8 +35,8 @@ fig = None
 titers = []
 log_titers = []
 for forward_rate in ks:
-    forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * forward_rate * 1e6 / M
-    backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 2**forward_rate * 50e5 / M
+    dissociation_rates = 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, number_of_antibodies))
 
     init_vals = [total_PFU * ratio / total_volume, total_antibody / total_volume]
@@ -46,7 +46,7 @@ for forward_rate in ks:
     
     y, log_titer, titer, _ = titrateAntigensAgainstSera(
         init_vals, dilutions, number_of_antigens, number_of_antibodies,
-        measurement_time, forward_rates, backward_ratios, interference_matrix)   
+        measurement_time, association_rates, dissociation_rates, interference_matrix)   
 
     if '<' in str(titer[0]): 
         titer_val = int(float(titer[0][1:]) / 2)

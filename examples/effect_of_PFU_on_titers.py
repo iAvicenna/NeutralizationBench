@@ -22,18 +22,19 @@ total_volume = 1e-4
 
 
 # with these parameters, pfu change leads to titer shift
-# forward_rates=np.ones((number_of_antigens,number_of_sera))*100e6/(M)
-# total_antibody=4*5e9
+# association_rates=np.ones((number_of_antigens,number_of_sera))*500e6/(M)
+# total_antibody=1*5e9
+
 
 # with these parameters, pfu change does not lead to titer shift
 # total_antibody=600*5e9
-# forward_rates=np.ones((number_of_antigens,number_of_sera))*10e6/(M)
+# association_rates=np.ones((number_of_antigens,number_of_sera))*10e6/(M)
 
 
-forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
+association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
 total_antibody = 600 * 5e9
 
-backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+dissociation_rates = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
 interference_matrix = np.ones((number_of_antigens, number_of_antibodies, number_of_antibodies))
 
 total_PFUs = [100, 10000]
@@ -50,7 +51,7 @@ for total_PFU in total_PFUs:
     y, log_titer, titer, _ = titrateAntigensAgainstSera(
         init_vals, dilutions, 
         number_of_antigens, number_of_antibodies, 
-        measurement_time, forward_rates, backward_ratios, 
+        measurement_time, association_rates, dissociation_rates, 
         interference_matrix)   
     
     ax, fig = outputTiterCurvePlot(y, log_titer, number_of_antigens, dilutions,

@@ -22,15 +22,15 @@ nspike = 450
 ratio = vratio * nspike
 total_volume = 1e-4
 
-forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 60e9 / M
-total_antibody = 20e9
-forward_rates[0, 1] *= 5
+association_constants = np.ones((number_of_antigens, number_of_antibodies)) * 5e5 / M
+total_antibody = 5e13
+association_constants[0, 1] *= 5
 
-backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
 interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                number_of_antibodies))
 
-interference_matrix[0, 0, 1] = 0
+interference_matrix[0, 0, 1] = 0 #complete interference
 interference_matrix[0, 1, 0] = 0
 
 total_PFU = 1000
@@ -41,7 +41,7 @@ measurement_time = 36
 
 y, log_titers, titers, _ = titrateAntigensAgainstSera(
     init_vals, dilutions, number_of_antigens, number_of_antibodies,
-    measurement_time, forward_rates, backward_ratios, interference_matrix)   
+    measurement_time, association_constants, dissociation_constants, interference_matrix)   
 ax = None
 fig = None
 

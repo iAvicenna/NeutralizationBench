@@ -23,14 +23,14 @@ nspike = 450
 ratio = vratio * nspike
 total_volume = 1e-4
 
-forward_rates = np.ones((number_of_antigens, number_of_antibodies)) * 60e9 / M
-backward_ratios = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 1e5 / M
+dissociation_rates = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
 interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
                                number_of_antibodies))
 
 
 total_PFU = 1000
-total_antibody = 10 * 1e9
+total_antibody = 5e13
 init_vals = [total_PFU * ratio / total_volume, total_antibody / total_volume]
 
 
@@ -39,7 +39,7 @@ dilutions = 1 / np.array([5120, 2560, 1280, 640, 320, 160, 80, 40, 20])
 
 y, log_titers, titers, _ = titrateAntigensAgainstSera(
     init_vals, dilutions, number_of_antigens, number_of_antibodies,
-    measurement_time, forward_rates, backward_ratios, interference_matrix)   
+    measurement_time, association_rates, dissociation_rates, interference_matrix)   
 
 ax, fig = outputTiterCurvePlot(
     y, log_titers, number_of_antigens, dilutions, fig=None, ax=None)
