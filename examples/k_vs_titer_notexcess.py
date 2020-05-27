@@ -19,15 +19,14 @@ from NeutralizationBench import outputScatterPlot
 number_of_antigens = 1
 number_of_antibodies = 1
 M = 6e23
-vratio = 50
-nspike = 450
-ratio = vratio * nspike
+particle_to_pfu_ratio = 50
+nspikes = 150
 total_volume = 1e-4
 
 
 total_PFU = 100
-total_antibody = 5e11
-ks = np.linspace(np.log2(0.01), np.log2(40), 200)
+total_antibody = 5e8
+ks = np.linspace(np.log2(0.01), np.log2(40), 100)
 len1 = ks.size
 
 ax = None
@@ -35,11 +34,11 @@ fig = None
 titers = []
 log_titers = []
 for forward_rate in ks:
-    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 2**forward_rate * 50e5 / M
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 2**forward_rate * 5e7 / M
     dissociation_rates = 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, number_of_antibodies))
 
-    init_vals = [total_PFU * ratio / total_volume, total_antibody / total_volume]
+    init_vals = [total_PFU * particle_to_pfu_ratio * nspikes / total_volume, total_antibody / total_volume]
     
     measurement_time = 3600
     dilutions = 1 / np.array([5120, 2560, 1280, 640, 320, 160, 80, 40, 20])    

@@ -15,24 +15,23 @@ from NeutralizationBench import outputTiterCurvePlot
 number_of_antigens = 1
 number_of_antibodies = 1
 M = 6e23
-vratio = 50
-nspike = 450
-ratio = vratio * nspike
+particle_to_pfu_ratio = 50
+nspikes = 150
 total_volume = 1e-4
 
 
 # with these parameters, pfu change leads to titer shift
-# association_rates=np.ones((number_of_antigens,number_of_sera))*500e6/(M)
-# total_antibody=1*5e9
+# association_rates=np.ones((number_of_antigens,number_of_sera))*5e8/(M)
+# total_antibody=5e8
 
 
 # with these parameters, pfu change does not lead to titer shift
 # total_antibody=600*5e9
-# association_rates=np.ones((number_of_antigens,number_of_sera))*10e6/(M)
+# association_rates=np.ones((number_of_antigens,number_of_sera))*1e5/(M)
 
 
-association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-total_antibody = 600 * 5e9
+association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 1e5 / M
+total_antibody = 600*5e9
 
 dissociation_rates = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
 interference_matrix = np.ones((number_of_antigens, number_of_antibodies, number_of_antibodies))
@@ -43,7 +42,7 @@ ax = None
 fig = None
 
 for total_PFU in total_PFUs:  
-    init_vals = [total_PFU * ratio / total_volume, total_antibody / total_volume]
+    init_vals = [total_PFU * particle_to_pfu_ratio * nspikes, total_antibody / total_volume]
     
     measurement_time = 3600
     dilutions = 1 / np.array([5120, 2560, 1280, 640, 320, 160, 80, 40, 20])
