@@ -32,7 +32,7 @@ def test_systemOfEquations(fail_switch=False):
         number_of_antigens, number_of_antibodies, number_of_antibodies))    
     
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
     except Exception as e:
@@ -53,7 +53,7 @@ def test_systemOfEquations(fail_switch=False):
                                     number_of_antibodies))
     
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
     except Exception as e:
@@ -79,7 +79,7 @@ def test_systemOfEquations(fail_switch=False):
         association_rates = np.ones((number_of_antigens, number_of_antibodies))
    
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
         
@@ -109,7 +109,7 @@ def test_systemOfEquations(fail_switch=False):
         association_rates = 5 * np.ones((number_of_antigens, number_of_antibodies))
    
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
         
@@ -144,7 +144,7 @@ def test_systemOfEquations(fail_switch=False):
                                   number_of_antibodies))
 
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
         
@@ -184,7 +184,7 @@ def test_ConservationLaws(fail_switch=False):
                                    number_of_antibodies))
 
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
         
@@ -221,7 +221,7 @@ def test_ConservationLaws(fail_switch=False):
                                    number_of_antibodies))
 
     try:
-        ode, variables, _ = _systemOfEquations(
+        ode, variables = _systemOfEquations(
             number_of_antigens, number_of_antibodies, association_rates,
             dissociation_constants, interference_matrix)   
         
@@ -281,6 +281,8 @@ def test_ConservationLaws(fail_switch=False):
     
     return False
  
+    
+
 def test_titrateAntigensAgainstSera(fail_switch=False):
     
     M = 6e23
@@ -498,109 +500,113 @@ def test_titrateAntigensAgainstSera(fail_switch=False):
         print('Test{} of titrateAntigensAgainstSera did not fail with fail_switch on.'.format(fail_test))
     
     return False
-    
 
-def test_assaySensitivity(fail_switch=False):
-    
+def test_inactivationThresholds(fail_switch=False):
     M = 6e23
     vratio = 50
     nspike = 450
     ratio = vratio * nspike
     total_volume = 1e-4
-    total_antibody = (np.random.rand(1,1)+0.5) * 600 * 5e9
-    total_PFU=(np.random.rand(1,1)+0.5) * 1000
+    total_antibody = (np.random.rand()+0.5) * 600 * 5e9
+    total_PFU=(np.random.rand()+0.5) * 1000
+
     
     is_failed = True  # every test fails until proven otherwise
     fail_test = 0
     if fail_switch:
         fail_test = np.random.randint(2) + 1  # fail one of the 2 tests on purpose
     
-    # test1: 1 antigen and 1 antibody with 0 sensitivity, titer data y should be all 1
+    # test 1: two antigens and one antibody which can only neutralize if number
+    # of bound antibodies per site is = max which is practically impossible 
+    # so should have no titers
+        
+    number_of_antigens = 2
+    number_of_antibodies = 1
+    a1 = np.random.randint(-4,4) 
+    dilutions = 1 / np.array([1280,640,320,160,80,40,20])
+    measurement_time = 3600
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 2 ** a1 * 1e5 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
+                                   number_of_antibodies))
+    init_vals = [total_PFU * ratio / total_volume, total_PFU * ratio / total_volume,
+                 2*total_antibody / total_volume]
+
+    if fail_test == 1:
+        inactivation_thresholds=[1]
+    else:
+        inactivation_thresholds=[150]
+        
+    try:
+        y, log_titers, titers, sol = titrateAntigensAgainstSera(
+        init_vals, dilutions, number_of_antigens, number_of_antibodies,
+        measurement_time, association_rates, dissociation_constants, 
+        interference_matrix, inactivation_thresholds = inactivation_thresholds,
+        print_equations=False)
+    except Exception as e:
+        print('Test1 of inactivationThresholds failed with exception\n "{}".'.format(e))
+        return is_failed    
+       
+    if not all(np.abs(x-1)<1e-6 for x in y.flatten()) and not all(x == '<20' for x in titers):
+        if not fail_switch:
+            print('Test1 of inactivationThresholds failed.')  
+        return is_failed
+    
     
     number_of_antigens = 1
     number_of_antibodies = 1
-    rand1 = np.random.rand() + 0.1
-    rand2 = np.random.rand() + 0.1
-    association_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    dissociation_constants = rand2 * 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    a1 = 0
+    dilutions = 1 / np.array([2560, 1280, 640, 320, 160, 80, 40, 20])
+    measurement_time = 3600
+    association_rates = np.ones((number_of_antigens, number_of_antibodies)) * 2 ** a1 * 1e5 / M
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
     interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
                                    number_of_antibodies))
-    init_vals = [total_PFU * ratio / total_volume, 2*total_antibody / total_volume]
-
-    if fail_test == 1:
-        assay_sensitivity = np.array([1])
-    else:
-        assay_sensitivity = np.array([0])
-    
-    dilutions = 1 / np.array([5120, 2560, 1280])
-    measurement_time = 50
-    
-    try:
-        y, log_titers, titers, sol = titrateAntigensAgainstSera(
-            init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, association_rates, dissociation_constants, 
-            interference_matrix, assay_sensitivity=assay_sensitivity,
-            print_equations=False)
-    except Exception as e:
-        print('Test1 of assaySensitivity failed with exception\n "{}".'.format(e))
-        return is_failed
-    
-    if not all(np.abs(z - 1) < 1e-5 for z in y.flatten()):
-        
-        if not fail_switch:
-            print('Test1 of titrateAntigensAgainstSera failed.')  
-        return is_failed
-    
-    # test2: 1 antigen and 2 antibody. If second antibody sensitivity is 0 then 
-    # y should be higher compared to if it is 1.
-    
-    number_of_antigens = 1
-    number_of_antibodies = 2
-    rand1 = np.random.rand() + 0.1
-    rand2 = np.random.rand() + 0.1
-    association_rates = rand1 * np.ones((number_of_antigens, number_of_antibodies)) * 10e6 / M
-    dissociation_constants = rand2 * 1e-4 * np.ones((number_of_antigens, number_of_antibodies))
-    interference_matrix = np.ones((number_of_antigens, number_of_antibodies, 
-                                   number_of_antibodies))
-    init_vals = [total_PFU * ratio / total_volume,
-                 2*total_antibody / total_volume, 2*total_antibody / total_volume]
+    init_vals = [total_PFU * ratio / total_volume,  2*total_antibody / total_volume]
 
     if fail_test == 2:
-        assay_sensitivity1 = np.array([1, 1])
-        assay_sensitivity2 = np.array([1, 1])
+        inactivation_thresholds=[1]
     else:
-        assay_sensitivity1 = np.array([1, 1])
-        assay_sensitivity2 = np.array([1, 0])
-    
-    dilutions = 1 / np.array([40, 20])
-    measurement_time = 50
-    
+        inactivation_thresholds=[2]
+        
     try:
-        y1, log_titers, titers, sol = titrateAntigensAgainstSera(
-            init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, association_rates, dissociation_constants, 
-            interference_matrix, assay_sensitivity=assay_sensitivity1,
-            print_equations=False)
+        y, log_titers, titers1, sol = titrateAntigensAgainstSera(
+        init_vals, dilutions, number_of_antigens, number_of_antibodies,
+        measurement_time, association_rates, dissociation_constants, 
+        interference_matrix, inactivation_thresholds = inactivation_thresholds,
+        print_equations=False)
         
-        y2, log_titers, titers, sol = titrateAntigensAgainstSera(
-            init_vals, dilutions, number_of_antigens, number_of_antibodies,
-            measurement_time, association_rates, dissociation_constants, 
-            interference_matrix, assay_sensitivity=assay_sensitivity2,
-            print_equations=False)
+        inactivation_thresholds=[1]
+        
+        y, log_titers, titers2, sol = titrateAntigensAgainstSera(
+        init_vals, dilutions, number_of_antigens, number_of_antibodies,
+        measurement_time, association_rates, dissociation_constants, 
+        interference_matrix, inactivation_thresholds = inactivation_thresholds,
+        print_equations=False)
     except Exception as e:
-        print('Test2 of assaySensitivity failed with exception\n "{}".'.format(e))
-        return is_failed
+        print('Test2 of inactivationThresholds failed with exception\n "{}".'.format(e))
+        return is_failed    
     
-    if not all(z1 < z2 for z1, z2 in zip(y1.flatten(), y2.flatten())):
+    
+    if isinstance(titers2[0],str):
+        if '<' in titers2[0]:
+            titers2[0] = 0.5*int(titers2[0][1:])
+        elif '>' in titers2[0]:
+            titers2[0] = 2*int(titers2[0][1:])  
+    
+    if isinstance(titers1[0],str):        
+        if '<' in titers1[0]:
+            titers1[0] = 0.5*int(titers1[0][1:])
+        elif '>' in titers1[0]:
+            titers1[0] = 2*int(titers1[0][1:])      
         
+    if titers2[0] <= titers1[0]:
         if not fail_switch:
-            print('Test2 of titrateAntigensAgainstSera failed.')  
+            print('Test2 of inactivationThresholds failed.')  
         return is_failed
-    
-    if fail_switch:
-        print('Test{} of titrateAntigensAgainstSera did not fail with fail_switch on.'.format(fail_test))
-
+   
     return False
+   
 
 def test_interferenceMatrix(fail_switch=False):
     
@@ -615,7 +621,7 @@ def test_interferenceMatrix(fail_switch=False):
     is_failed = True  # every test fails until proven otherwise
     fail_test = 0
     if fail_switch:
-        fail_test = np.random.randint(2) + 1  # fail one of the 2 tests on purpose
+        fail_test = np.random.randint(3) + 1  # fail one of the 2 tests on purpose
     
     # test1: 1 antigen and 2 antibody with complete interference so there should
     # be no V_0Ab_0_1
@@ -692,6 +698,58 @@ def test_interferenceMatrix(fail_switch=False):
         
         if not fail_switch:
             print('Test2 of interference_matrix failed.')  
+        return is_failed
+    
+   
+    
+    # test3: an antibody with high association constant but low neutralization
+    # should decrease titers
+    
+    number_of_antigens = 1
+    number_of_antibodies = 2    
+    association_constants = np.ones((number_of_antigens, number_of_antibodies)) * 0.1e5 / M
+    association_constants[0,1]*=100
+    total_antibody = 5e13
+    
+    dissociation_constants = 1e-3 * np.ones((number_of_antigens, number_of_antibodies))
+    interference_matrix = np.ones((number_of_antigens, number_of_antibodies,
+                                   number_of_antibodies))
+    
+    interference_matrix[0, 0, 1] = 0 #complete interference
+    interference_matrix[0, 1, 0] = 0
+    inactivation_thresholds=[1, 150]
+    total_PFU = 1000
+    init_vals = [total_PFU * ratio / total_volume, 0.5 * total_antibody / total_volume, 0.5 * total_antibody / total_volume]
+    dilutions = 1 / np.array([5120, 2560, 1280, 640, 320, 160, 80, 40, 20])
+    measurement_time = 3600
+    
+    interference_matrix[0, 0, 1] = 0 #complete interference
+    interference_matrix[0, 1, 0] = 0
+    
+    if fail_test == 3:
+        interference_matrix[0, 0, 1] = 1 
+        interference_matrix[0, 1, 0] = 1
+    
+    try:
+            
+        y1, log_titers1, titers, sol1 = titrateAntigensAgainstSera(
+            init_vals, dilutions, number_of_antigens, number_of_antibodies,
+            measurement_time, association_constants, dissociation_constants, interference_matrix,
+            inactivation_thresholds=inactivation_thresholds)   
+        
+        interference_matrix[0, 0, 1] = 1 #no interference
+        interference_matrix[0, 1, 0] = 1
+        y2, log_titers2, titers2,sol2 = titrateAntigensAgainstSera(
+            init_vals, dilutions, number_of_antigens, number_of_antibodies,
+            measurement_time, association_constants, dissociation_constants, interference_matrix,
+            inactivation_thresholds=inactivation_thresholds)  
+    except Exception as e:
+        print('Test3 of interference_matrix failed with exception\n "{}".'.format(e))
+        return is_failed
+    
+    if any(x<=y for x,y in zip(y1.flatten(),y2.flatten())):
+        if not fail_switch:
+            print('Test3 of interference_matrix failed.')  
         return is_failed
     
     if fail_switch:

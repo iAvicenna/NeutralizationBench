@@ -6,7 +6,7 @@ Created on Sat May 16 16:24:48 2020
 @author: Sina
 """
 
-from testSuite import test_systemOfEquations, test_titrateAntigensAgainstSera, test_ConservationLaws, test_assaySensitivity, test_interferenceMatrix
+from testSuite import test_systemOfEquations, test_titrateAntigensAgainstSera, test_ConservationLaws, test_interferenceMatrix, test_inactivationThresholds
 import time
 
 # There is some randomness in tests so we iterate each test multiple times
@@ -14,8 +14,22 @@ import time
 # When fail_switch is on, the inputs to the tests are messed with in such a way
 # that tests should fail.
 
-
 failed_test = 0
+print('Testing function inactivation_thresholds parameter (2 tests)')
+for i in range(5):    
+    is_failed = test_inactivationThresholds()
+    if is_failed:
+        print('test_inactivationThresholds failed.')
+        failed_test += 1
+        break
+    
+    is_failed =  test_inactivationThresholds(fail_switch=True)
+    if not is_failed:
+        print('test_inactivationThresholds with fail_switch On did not fail.')
+        failed_test += 1
+        break
+        
+
 t0 = time.time()
 print('Testing function systemOfEquations (4 tests)')
 for i in range(5):
@@ -59,19 +73,6 @@ for i in range(5):
         failed_test += 1
         break
 
-print('Testing assay_sensitivity Parameter (2 tests)')    
-for i in range(10):    
-    is_failed = test_assaySensitivity()
-    if is_failed:
-        print('test_assaySensitivity failed.')
-        failed_test += 1
-        break
-    
-    is_failed = test_assaySensitivity(fail_switch=True)
-    if not is_failed:
-        print('test_assaySensitivity with fail_switch On did not fail.')
-        failed_test += 1
-        break
 
 print('Testing interference_matrix Parameter (2 tests)')    
 for i in range(10):    
