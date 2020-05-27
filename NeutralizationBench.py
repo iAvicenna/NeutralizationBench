@@ -10,9 +10,134 @@ assuming each antibody targets only a single site on each antigen.
 
 """
 
+import numpy as np
+import itertools
+import re
+import time
+import sys
+import math
+#  computes the probabilities that a virus would be bound to a given number of
+#  antibody complexes
+
+def _complex_properties(all_variables, inactivation_weights):    
+    antigenAb_complexes = np.array([i for i, name in enumerate(all_variables) 
+                                    if len(re.findall(r'V', name)) > 0 
+                                    and len(re.findall(r'Ab', name)) > 0])
+    complex_antigen_indices = []
+    complex_antibody_indices = []
+    complex_inactivation_weights = []
+    complex_names=[]
+    
+    for name in [all_variables[x] for x in antigenAb_complexes]:
+        I = re.findall(r'V\d*', name)
+        assert len(I) > 0
+        
+        complex_antigen_indices.append(all_variables.index(I[0]))
+        
+        J =  re.findall(r'_\d+',name)
+        assert len(J) > 0
+        
+        complex_names.append(name)
+        complex_antibody_indices.append([int(x[1:]) for x in J])
+        complex_inactivation_weights.append(0)
+        
+        for i in complex_antibody_indices[-1]:
+            complex_inactivation_weights[-1] = np.max ([complex_inactivation_weights[-1], 
+                                                        inactivation_weights[i]])
+
+     
+    return complex_inactivation_weights, complex_antibody_indices, complex_antigen_indices, antigenAb_complexes, complex_names    
+
+    
+def _computeActivateAntigenProportions(init_vals, free_probabilities, 
+                                         complex_probabilities, 
+                                         complex_inactivation_weights, 
+                                         complex_antigen_indices, 
+                                         number_of_antigens,
+                                         max_number_of_sites,
+                                         complex_names):
+
+    from scipy.special import xlogy, gammaln
+
+    active_antigen_proportions = np.zeros((number_of_antigens,))
+    
+    for ai in range(number_of_antigens):
+        I = np.array([i for i,x in enumerate(complex_antigen_indices) if x==ai])
+
+        max_N = [np.min([max_number_of_sites, round(1/w)]) for w in [complex_inactivation_weights[x] for x in I]]
+        lengths = [x for x in max_N]
+        len_mesh= np.prod(lengths)
+        
+        if len_mesh > 1e6:
+             print('''
+                  Warning: Way too many combinations {:.2e} of bindings between antibodies
+                  the computation might take a long time. Antibody complexes with high 
+                  number of antibodies and low probabilities will be disregarded.        
+                  '''.format(len_mesh))  
+                  
+             factor = max(complex_probabilities)**(max_number_of_sites-1)*math.factorial(max_number_of_sites-1)     
+             for i,name in enumerate(complex_names):
+                J = re.findall('Ab\w*',name)
+                K = J[0].split('_')
+                
+                if len(K) > 2: 
+                    if factor * complex_probabilities[i] < 1e-8:
+                        max_N[i] = 1
+                    elif factor * complex_probabilities[i] < 1e-4:
+                        max_N[i] = 2
+                    
+             lengths = [x for x in max_N]
+             len_mesh= np.prod(lengths)
+            
+        if len_mesh > 400000 and len_mesh < 1e6:
+            print('''
+                  Warning: Still yoo many combinations {:.2e} of bindings between antibodies
+                  the computation might take a long time. If so either decrease
+                  inactivation_thresholds to lower values or decrease the number
+                  of sera.
+                  '''.format(len_mesh))     
+         
+        if len_mesh > 1e6:
+            print('''
+                  Warning: Still way too many combinations {:.2e} of bindings between antibodies
+                  the computation might take a long time. If so either decrease
+                  inactivation_thresholds to lower values or decrease the number
+                  of sera.
+                  '''.format(len_mesh))         
+            
+            
+        weights = np.array([complex_inactivation_weights[x] for x in I])
+    
+        assert all(x > 0 for x in max_N)
+        assert len(max_N) == len(I)
+        
+        mesh = itertools.product(*[np.arange(0,int(maxn),1) for maxn in max_N])
+        prob = np.array([free_probabilities[ai]] + [complex_probabilities[x] for x in I])
+       
+        for points in mesh:
+            active_weight = 1-np.sum(np.array(points)*weights)
+            if active_weight > 0:
+                sum_bound = sum(points)
+                numbers = np.array([max_number_of_sites - sum_bound] + list(points))
+                multinomial_val = np.exp(gammaln(max_number_of_sites+1) + np.sum(xlogy(numbers, prob) - gammaln(numbers+1), axis=-1))
+                active_antigen_proportions[ai] += multinomial_val
+              
+ 
+   
+    return active_antigen_proportions
+
+def lfun(t, z, ode_funs, all_variables, ode_variable_indices):
+
+        y = []
+        for fun, var in zip(ode_funs, all_variables):
+            val = [z[i] for i in ode_variable_indices[var]]
+            y.append(fun(*val))
+
+        return y
+
 def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rates,
-                       dissociation_rates, interference_matrix,
-                       assay_sensitivity=None, print_equations=False):
+                       dissociation_rates, interference_matrix, max_bound=3, 
+                       print_equations=False):
 
     """
     Given number_of_antigens,number_of_antibodies,association and dissociaton rates
@@ -36,21 +161,12 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rat
     no interference if it is 0 then it is full interference.
 
     """
-    import numpy as np
     from sympy import symbols, lambdify
     from itertools import combinations
-    import re
 
     if number_of_antigens == 0 or number_of_antibodies == 0:
-        return None, None, None
-
-    if assay_sensitivity is None:
-        assay_sensitivity = np.ones((number_of_antibodies,))
-    elif assay_sensitivity.size != number_of_antibodies:
-        raise ValueError(
-            """Assay sensitivity must have number of elements equal to 
-            number of antibodies""")
-            
+        return None, None
+       
     s1, s2 = association_rates.shape
     s3, s4 = dissociation_rates.shape
     s5, s6, s7 = interference_matrix.shape
@@ -105,7 +221,6 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rat
 
     bound_antibodies = {}  # dictionary mapping a variable to the list of bound antbodies it contains, ex: V_i * Ab_j_k => j,k
     # here we generate all the symbolic variables associated to the system
-
     for i in range(number_of_antigens):
         antigen_name = 'V' + str(i)
         for j in range(1, number_of_antibodies + 1):
@@ -132,7 +247,6 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rat
     RHS = []  # list of variables on the righthand sides for equations, each entry corresponds to one equation
     LHS = []  # same as above but lefthand side 
     ks = []   # association and dissociation rates for each equation
-        
     for var in variables:
         antigen_name = re.findall(r'V\d+', var)[0]
         i = int(antigen_name[1:])
@@ -165,7 +279,6 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rat
                     compound_name = 'Ab' + ''.join(['_' + str(x) for x in new_bound])
                     RHS.append(antigen_name + compound_name)
                     ks.append((k, b))
-
     for lterms, rterm, k in zip(LHS, RHS, ks):
         lterm1 = lterms[0]
         lterm2 = lterms[1]
@@ -182,54 +295,36 @@ def _systemOfEquations(number_of_antigens, number_of_antibodies, association_rat
         ode_variable_indices[rterm] = sorted(list(set(ode_variable_indices[rterm] + [all_variables.index(lterm1), all_variables.index(lterm2), all_variables.index(rterm)])))
 
     ode_funs = []
-    inactive_proportions = []
-    
-    for var in all_variables:
+   
+ 
+    for ind,var in enumerate(all_variables):
+       
         ode = odes[var]
         ode_funs.append(lambdify([symbolic_vars[i]
                                   for i in ode_variable_indices[var]],
                                  ode, 'numpy'))
-        if len(re.findall(r'V\d+$', var)) == 1:
-            inactive_proportions.append(0)
-            
-        elif len(re.findall(r'V\d+', var)) == 0:
-            inactive_proportions.append(0)
-
-        else: 
-            bounds = bound_antibodies[var]  # antibodies bound to this complex
-            ip = 0
-            for j in bounds:
-                ip = np.max([ip, assay_sensitivity[j]])
-                
-            inactive_proportions.append(ip)    
-                
+        time.sleep(0.01)
+     
+           
+    
     if print_equations:
         print('System of equations is:\n')
         for i, var in enumerate(all_variables):
             print(str(i) + '- d[' + str(var) + ']/dt=', end='')
             print(odes[var])
             print('')
+     
+    
 
-    def lfun(t, z, ode_funs, all_variables, variable_indices):
 
-        y = []
-        for fun, var in zip(ode_funs, all_variables):
-            val = [z[i] for i in ode_variable_indices[var]]
-            y.append(fun(*val))
-
-        return y
-
-    def ode_fun(t, z): 
-        return lfun(t, z, ode_funs, all_variables, ode_variable_indices)  
-
-    return ode_fun, all_variables, inactive_proportions
-
+    return lambda t,z: lfun(t, z, ode_funs, all_variables, ode_variable_indices)  , all_variables
 
 def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
                                number_of_antibodies, measurement_time,
                                association_rates, dissociation_rates,
-                               interference_matrix, assay_sensitivity=None,
-                               print_equations=False):
+                               interference_matrix, max_number_of_sites=150,
+                               inactivation_thresholds=None, print_equations=False,
+                               output='log'):
 
     """
     For n antigens and m antibodies, given init_vals in order for the n
@@ -255,42 +350,55 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
     interferes with binding of antibody k for antigen i. If it is 1, there is
     no interference if it is 0 then it is full interference.
     
-    Assay sensitivity measures the sensitivity of an assay for a given 
-    antibody. This is used in _systemOfEquations to compute inactive_
-    proportions. If for instance assay_sensitivity[0]=0 then any virus that is
-    only bound to first antibody is not inactivated. In this case all viruses
-    of the form VA0 are still active. An example is if you are doing an HI
-    assay, NA antibodies, even though could bind to the virus will not 
-    inactivate it from the perspective of an HI assay.
-    
-    More generally if we denote sensitivity for i^th antibody as s_i then
-    given the complex V_j Ab_{i_1} Ab_{i_2} ... Ab_{i_k}, only max_i[s_i]
-    proportion of this will be inactivated. This value is stored in inactive_
-    proportions which is returned from _systemOfEquations
-
+    Inactivation_thresholds is the number of antibodies required to bind for 
+    each antibody that can completely neutralize the virus. If there are two
+    antibodies Ab1, Ab2 and this array is [1, 5] then it means a single Ab1
+    can neutralize the virus completely where as it takes 5 Ab2 to neutralize it.
+    Combinatorics of this depends on the max_number_of_sites.
 
     """
 
     import numpy as np
-    import re
     from scipy.integrate import solve_ivp
 
     init_vals = [float(x) for x in init_vals]
     
-    if len(init_vals) != number_of_antigens + number_of_antibodies:
-        print("""
-              Warning, length of init_vals is not equal to total number of
-              antigen and antibody variables. Remaining will be set to 0.
-              """)
+    assert len(init_vals) == number_of_antigens + number_of_antibodies
+        
+    assert all(x>0 for x in init_vals[0:number_of_antigens])
+    
 
-    # create the sustem of equations used to describe the system
-    ode_fun, all_variables, inactive_proportions = _systemOfEquations(
+
+    if inactivation_thresholds is None:
+        inactivation_thresholds = np.ones((number_of_antibodies,))
+        inactivation_weights = 1 / np.array(inactivation_thresholds)
+    else:
+        assert len(inactivation_thresholds) == number_of_antibodies
+        assert all(x >= 1 and int(x) == x for x in inactivation_thresholds)
+       
+        inactivation_weights = 1 / np.array(inactivation_thresholds)
+
+
+    if number_of_antibodies > 4:
+        print('''
+              Warning: If number of antibodies are higher than 4, it might take 
+              long computation times due to combinatorial explosion.
+              ''')
+
+    orig_stdout = sys.stdout
+    if output is not sys.stdout:
+        f = open(output, 'w')
+        sys.stdout = f
+
+
+    # create the system of equations used to describe the system
+    print('Generating system of equations.')
+    ode_fun, all_variables = _systemOfEquations(
         number_of_antigens, number_of_antibodies, association_rates, 
-        dissociation_rates, interference_matrix, print_equations=print_equations,
-        assay_sensitivity=assay_sensitivity)
+        dissociation_rates, interference_matrix, print_equations=print_equations)
     
     number_of_variables = len(all_variables)
-
+   
     y3 = [0] * (number_of_variables - len(init_vals))
 
     init_vals = np.array(list(init_vals) + list(y3))
@@ -298,19 +406,35 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
     tspan = [0, measurement_time]
     y = np.zeros((number_of_antigens, len(dilutions)))
 
-    nondiluted_sera_vals = init_vals[number_of_antigens:number_of_antibodies + 1].copy()
+    nondiluted_sera_vals = init_vals[number_of_antigens:number_of_antigens + number_of_antibodies + 1].copy()
     solutions=[]
+    print('Finding complex propoerties..')
+    complex_inactivation_weights, complex_antibody_indices, complex_antigen_indices, antigenAb_complexes, complex_names = _complex_properties(all_variables, inactivation_weights)    
+        
+    initial_antigen_amounts = np.array([init_vals[x] for x in complex_antigen_indices])
+    print('Done.')
     for i, dil in enumerate(dilutions):
-        init_vals[number_of_antigens:number_of_antibodies + 1] = nondiluted_sera_vals * dil
+        init_vals[number_of_antigens:number_of_antigens + number_of_antibodies + 1] = nondiluted_sera_vals * dil
         t_step = min(measurement_time,600)
         t_eval = np.arange(0, tspan[-1] + t_step,t_step)
        
+        print('Calculating solutions for dilution {}'.format(dil))
         sol = solve_ivp(ode_fun, tspan, init_vals, t_eval=t_eval)
         solutions.append(sol.y)
+        
+        free_probabilities =  sol.y[0:number_of_antigens, -1]/init_vals[0:number_of_antigens]
+        complex_probabilities = sol.y[antigenAb_complexes,-1]/initial_antigen_amounts
+         
+        assert all(not np.isnan(x) for x in free_probabilities)
+        assert all(not np.isnan(x) for x in complex_probabilities)
+        
+        print('Calculating combinatorics of binding for dilution {}'.format(dil))
+        active_antigen_proportions=_computeActivateAntigenProportions(
+            init_vals[0:number_of_antigens], free_probabilities, complex_probabilities, 
+            complex_inactivation_weights, complex_antigen_indices, number_of_antigens,
+            max_number_of_sites, complex_names)
         for j in range(number_of_antigens):
-            for k, var in enumerate(all_variables):
-                if len(re.findall(r'V' + str(j), var)) > 0: 
-                    y[j, i] += (1 - inactive_proportions[k]) * sol.y[k][-1] / init_vals[j]
+            y[j, i] += active_antigen_proportions[j]
 
     log_titers = []
     titers = []
@@ -338,6 +462,10 @@ def titrateAntigensAgainstSera(init_vals, dilutions, number_of_antigens,
         log_titers.append(titer)
         titers.append(int(2**(-titer)))
 
+    if output is not sys.stdout:
+        f.close()
+        sys.stdout = orig_stdout
+        
     return y, log_titers, titers, solutions
 
 
